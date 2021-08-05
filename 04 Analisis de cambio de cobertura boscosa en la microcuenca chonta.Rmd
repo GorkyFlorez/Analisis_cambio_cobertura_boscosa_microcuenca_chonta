@@ -1,0 +1,93 @@
+---
+title: "Perdida de la cobertura boscosa en la cuenca chonta"
+author: "Gorky Florez Castillo"
+date: "4/8/2021"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: cerulean
+---
+```{r setup, include=FALSE}
+# Instalar librerias ------------------------------------------------------------
+# install.packages("googledrive")
+# install.packages("rgee")
+library(googledrive)
+library(rgee)
+library(mapedit)
+library(tibble)
+library(sf)
+library(cptcity)
+library(tidyverse)
+library(sp)
+library(leaflet.extras2)
+# Instalar rtools---------------------------------------------------------
+# rtools
+# Sys.which("make")
+# Paquete de rgee
+#ee_install()
+
+# Nos pedira si queremos instalar miniconda dareos Y
+# Creara un nuevo entorn Python
+# Nos pedira reiniciar la consola daremos 1
+# Instalar rtools---------------------------------------------------------
+# Iniciamos nuestra cuenta de Rgee
+ee_Initialize("gflorezc", drive = T)
+# ee_install()
+# point <- mapedit::drawFeatures()                        # Buscamos nuestro punto de referencia
+# point <- st_geometry(point) %>% sf_as_ee()              # Convirtemos el objeto a shp en ee
+
+Cuen_chonta <- st_read ("SHP/Perimetro.shp")%>%         #Subimos nuestro capa de shp de chonta
+               sf_as_ee()                               #El formato de ee al shp
+#-----------------------------------IMAGEN 2019-----------------------------
+chon_despues<- ee$ImageCollection("LANDSAT/LC08/C01/T1_TOA")$             #Seleccionamos el satelite
+               filterDate("2019-07-01", "2020-10-05")$                    # Colocamos la  fecha
+               filterBounds(Cuen_chonta)$                    
+               filterMetadata("CLOUD_COVER", "less_than", 5)              # Porcentaje de nuves
+catalogo <- ee_get_date_ic(chon_despues)                                  # Catalogo de imagenes 
+
+chonta_despues<- ee$Image('LANDSAT/LC08/C01/T1_TOA/LC08_002069_20190817')$# colocamos las imagen 
+               clip(Cuen_chonta )%>%                                      # Cortamos la imagen con el area
+               ee$Image$select(c("B6","B5", "B4"))                        # Combinacion de bandas 
+
+L8            <- 'LANDSAT/LC08/C01/T1_TOA/LC08_002069_20190817'%>%             # Cargamos la imagen a descargar 
+               ee$Image() %>%                                             # La naturaleza
+               ee$Image$select(c("B6","B5", "B4"))                        # Realizamos una conbinacion de bandas
+#-----------------------------------IMAGEN 2014-----------------------------
+chon_antes <- ee$ImageCollection("LANDSAT/LC08/C01/T1_TOA")$              #Seleccionamos el satelite
+               filterDate("2014-07-01", "2015-10-05")$                    # Colocamos la  fecha
+               filterBounds(Cuen_chonta)$
+               filterMetadata("CLOUD_COVER", "less_than", 5)              # Porcentaje de nuves
+
+chonta_antes <- ee$Image('LANDSAT/LC08/C01/T1_TOA/LC08_002069_20140819')$# colocamos las imagen 
+               clip(Cuen_chonta )%>%                                     # Cortamos la imagen con el area
+               ee$Image$select(c("B6","B5", "B4"))                       # Combinacion de bandas 
+#-----------------------------------Mapa-----------------------------
+```
+Google Earth Engine en RStudio
+===================================== 
+
+Column {data-width=550}
+-----------------------------------------------------------------------
+
+### Mapa de Cambio de cobertura boscosa entre el  2014 - 2019 Microcuenca chonta
+```{r map}
+Map$setCenter(-69.289416,-12.659169 ,13) 
+Map$addLayer(chonta_antes) |
+Map$addLayer(chonta_despues)
+```
+Column {data-width=450}
+-----------------------------------------------------------------------
+
+### Mapa Combinancion de bandas B6 - B5 - B4
+```{r map1}
+Map$centerObject(L8)                                                  # Centramos el mapa para vizualizacion
+Map$addLayer(L8)                                                      # Llamamos el objeto 
+```
+
+### Mapa de NDVI de Yungay
+```{r map2}
+Map$addLayer(Cuen_chonta) 
+```
+
+
+
+
